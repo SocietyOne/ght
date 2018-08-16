@@ -2,6 +2,14 @@
 
 A GitHub-Twilio integration that notifies via SMS when an Issue is opened or closed on this repo.
 
+## Prerequisites
+
+* Go (version)
+* ngrok
+* go get libraries used: ("github.com/google/go-github/github"), ("github.com/sfreiberg/gotwilio")
+
+```go get -v ./...```
+
 ## Setup
 
 This version of the app only runs locally and requires you to have `ngrok` setup. Please make sure you install it by following the instructions for your OS at [https://ngrok.com/download](https://ngrok.com/download) before proceeding.
@@ -20,6 +28,18 @@ Before running this service, set up that number in your environment:
 
 ```
 export TWILIO_SMS_NUMBER="+61555555555"
+```
+
+Also export your twilio account Sid and authtoken too:
+
+```
+export TWILIO_ACCONT_SID=XXXXX
+export TWILIO_AUTHTOKEN=YYYY
+```
+
+and the recipient number:
+```
+export RECIPIENT_NUMBER=+6111111111
 ```
 
 Then run the app:
