@@ -6,9 +6,8 @@ import (
   "io/ioutil"
   "strings"
 	"html/template"
-  "net/url"
 	"net/http"
-  "encoding/json"
+	"github.com/sfreiberg/gotwilio"
   "github.com/google/go-github/github"
 )
 
@@ -32,10 +31,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
   twilioAccountSid := "AC6f89947b675cb7faff5ca54001a888fb"
   twilioAuthToken := "19b3029e50a1dcdba16119fa8c69ef73"
 
-  // // Format the Twilio Messages API URL with testing account id
-  twilioUrl := "https://api.twilio.com/2010-04-01/Accounts/" + twilioAccountSid + "/Messages.json"
-  
-  fmt.Println(twilioUrl)
+	twilio := gotwilio.NewTwilioClient(twilioAccountSid, twilioAuthToken)
 
   // Read in the request body and make sure we can parse it first:
 	payload, err := ioutil.ReadAll(r.Body)
@@ -76,39 +72,13 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
     // for now, output it to stdout
     fmt.Println(templatedMessageStr)
 
-    twilioMessageData := url.Values{}
-
     // Set the destination number to my verified Twilio mobile
-    twilioMessageData.Set("To","+61491081106")
-
+    twilioTo := "+61491081106"
     // Set the sent-from number to the number I setup in the Twilio dashboard
-    twilioMessageData.Set("From","+61488811670")
+    twilioFrom := "+61488811670"
 
-    // Finally set the text to the formatted string with the GH issue content
-    twilioMessageData.Set("Body", templatedMessageStr)
-    twilioMessageDataReader := *strings.NewReader(twilioMessageData.Encode())
-    log.Println(twilioMessageDataReader)
-
-    // post to Twilio's API to send the sms
-    client := &http.Client{}
-    req, _ := http.NewRequest("POST", twilioUrl, &twilioMessageDataReader)
-    req.SetBasicAuth(twilioAccountSid, twilioAuthToken)
-    //req.Header.Add("Accept", "application/json")
-    //req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-    // Make HTTP POST request and return the message SID
-    resp, _ := client.Do(req)
-    if (resp.StatusCode >= 200 && resp.StatusCode < 300) {
-      var data map[string]interface{}
-      decoder := json.NewDecoder(resp.Body)
-      err := decoder.Decode(&data)
-      if (err == nil) {
-        fmt.Println(data["sid"])
-      }
-    } else {
-      fmt.Println(resp.Status);
-      fmt.Println(resp);
-    }
+    // Finally, send the message using the go twilio pkg
+    twilio.SendSMS(twilioFrom, twilioTo, templatedMessageStr, "", "")
 
 	default:
 		log.Printf("Error, unknown event type %s\n", github.WebHookType(r))
