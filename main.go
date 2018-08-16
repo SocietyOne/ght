@@ -2,19 +2,36 @@ package main
 
 import (
   "fmt"
-	"io"
 	"log"
+  "io/ioutil"
 	"net/http"
-	"os"
+  "github.com/google/go-github/github"
 )
 
 // Handle requests made to our webhook
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("headers: %v\n", r.Header)
 
-	_, err := io.Copy(os.Stdout, r.Body)
+	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Println(err)
+		log.Printf("error reading request body: err=%s\n", err)
+		return
+	}
+	defer r.Body.Close()
+
+	event, err := github.ParseWebHook(github.WebHookType(r), payload)
+	if err != nil {
+		log.Printf("could not parse webhook: err=%s\n", err)
+		return
+	}
+  switch e := event.(type) {
+  case *github.IssuesEvent:
+		// this is an issue-related event
+    fmt.Println("issue type found: %s", *e.Action)
+    fmt.Println("issue title: %s", *e.Issue.Title)
+    fmt.Println("issue creator: %s", *e.Sender.Login)
+    fmt.Println("issue repo: %s", *e.Repo.Name)
+	default:
+		log.Printf("Error, unknown event type %s\n", github.WebHookType(r))
 		return
 	}
 }
