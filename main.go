@@ -1,6 +1,7 @@
 package main
 
 import (
+  "os"
   "fmt"
 	"log"
   "io/ioutil"
@@ -22,6 +23,11 @@ const smsTemplate = `Issue {{.Title}} {{.Url}}
 
 // Handle requests made to our webhook
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
+
+  smsNumber, ok := os.LookupEnv("TWILIO_SMS_NUMBER")
+  if !ok {
+    log.Fatal("Missing required environment variable TWILIO_SMS_NUMBER: set this to the recipient verified mobile number!")
+  }
 
   // Twilio integration - account keys
   // Note: these are my test credentials, for my account jacqui.maher@gmail.com
@@ -72,13 +78,11 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
     // for now, output it to stdout
     fmt.Println(templatedMessageStr)
 
-    // Set the destination number to my verified Twilio mobile
-    twilioTo := "+61491081106"
     // Set the sent-from number to the number I setup in the Twilio dashboard
     twilioFrom := "+61488811670"
 
     // Finally, send the message using the go twilio pkg
-    twilio.SendSMS(twilioFrom, twilioTo, templatedMessageStr, "", "")
+    twilio.SendSMS(twilioFrom, smsNumber, templatedMessageStr, "", "")
 
 	default:
 		log.Printf("Error, unknown event type %s\n", github.WebHookType(r))
