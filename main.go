@@ -34,22 +34,24 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
   // https://www.twilio.com/console/project/settings
   // twilioAccountSid := "AC4e4f8c6c42a699f065badd25f5137a00"
   // twilioAuthToken := "c7ff639a05b9e03b57222a3b212364d8"
+  // TODO: for a real app I wouldn't hardcode any of this, refactor if actually using...
   twilioAccountSid := "AC6f89947b675cb7faff5ca54001a888fb"
   twilioAuthToken := "19b3029e50a1dcdba16119fa8c69ef73"
 
+  // Create a new client able to talk to Twilio's API
 	twilio := gotwilio.NewTwilioClient(twilioAccountSid, twilioAuthToken)
 
   // Read in the request body and make sure we can parse it first:
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("error reading request body: err=%s\n", err)
+		fmt.Println("Unable to read payload body: ", err)
 		return
 	}
 	defer r.Body.Close()
 
 	event, err := github.ParseWebHook(github.WebHookType(r), payload)
 	if err != nil {
-		log.Printf("could not parse webhook: err=%s\n", err)
+		fmt.Println("Unable to parse webhook payload: ", err)
 		return
 	}
 
@@ -57,7 +59,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
   // we still check that it's a github.IssuesEvent type
   switch e := event.(type) {
   case *github.IssuesEvent:
-    fmt.Println("Issue event fired with action: %s", *e.Action)
+    fmt.Println("Received issues event from GitHub with action ", *e.Action)
 
     // Populate data to fill in that sms template created at the beginning:
     templateData := map[string]interface{}{
@@ -75,14 +77,13 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
       panic(err)
     }
     templatedMessageStr := builder.String()
-    // for now, output it to stdout
-    fmt.Println(templatedMessageStr)
 
     // Set the sent-from number to the number I setup in the Twilio dashboard
     twilioFrom := "+61488811670"
 
     // Finally, send the message using the go twilio pkg
     twilio.SendSMS(twilioFrom, smsNumber, templatedMessageStr, "", "")
+    fmt.Println("Sent SMS to ", smsNumber)
 
 	default:
 		log.Printf("Error, unknown event type %s\n", github.WebHookType(r))
@@ -92,13 +93,9 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-  // start the http service that will accept requests from github
-  log.Println("server started")
+  // Start the http service that will accept requests from github
+  log.Println("Server starting on port 8000...")
   http.HandleFunc("/webhook", handleWebhook)
   log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
-// TODO: other stuff to keep in mind:
-//        * properly formatting this code
-//        * what test framework to use
-//        * ensure the README makes sense. see note in that file.
