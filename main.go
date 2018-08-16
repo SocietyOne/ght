@@ -4,10 +4,18 @@ import (
   "fmt"
 	"log"
   "io/ioutil"
+  "strings"
+	"html/template"
 	"net/http"
   "github.com/google/go-github/github"
 )
 
+// According to the test instructions, format messages like so:
+//   Issue: {{Issue.title}} {{issue.url}}
+//   [Opened | Closed] by {{user.login}} in {{repository.name}}
+const smsTemplate = `Issue {{.Title}} {{.Url}}
+{{.Action}} by {{.Username}} in {{.Repo}}
+`
 // Handle requests made to our webhook
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
@@ -25,11 +33,21 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
   switch e := event.(type) {
   case *github.IssuesEvent:
-		// this is an issue-related event
-    fmt.Println("issue type found: %s", *e.Action)
-    fmt.Println("issue title: %s", *e.Issue.Title)
-    fmt.Println("issue creator: %s", *e.Sender.Login)
-    fmt.Println("issue repo: %s", *e.Repo.Name)
+    fmt.Println("Issue event action: %s", *e.Action)
+    templateData := map[string]interface{}{
+      "Title":    *e.Issue.Title,
+      "Url":      *e.Issue.URL,
+      "Action":   *e.Action,
+      "Username": *e.Sender.Login,
+      "Repo":     *e.Repo.Name,
+    }
+    t := template.Must(template.New("sms").Parse(smsTemplate))
+    builder := &strings.Builder{}
+    if err := t.Execute(builder, templateData); err != nil {
+      panic(err)
+    }
+    templatedMessageStr := builder.String()
+    fmt.Println(templatedMessageStr)
 	default:
 		log.Printf("Error, unknown event type %s\n", github.WebHookType(r))
 		return
@@ -37,6 +55,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
   // start the http service that will accept requests from github
   log.Println("server started")
   http.HandleFunc("/webhook", handleWebhook)
