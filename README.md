@@ -14,7 +14,7 @@ cd $GOPATH/github/jacqui
 git clone git@github.com:jacqui/ght.git
 ```
 
-Ensure you have a verified mobile number in Twilio - do this in your Twilio dashboard]().
+Ensure you have a verified mobile number in Twilio - do this in your [Twilio dashboard](https://www.twilio.com/console).
 
 Before running this service, set up that number in your environment:
 
